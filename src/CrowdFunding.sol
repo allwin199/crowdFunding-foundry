@@ -37,7 +37,7 @@ contract CrowdFunding {
     ////////////////  Type Declarations  /////////////////////
     //////////////////////////////////////////////////////////
     struct Campaign {
-        address creator;
+        address payable creator;
         string name;
         string description;
         uint256 targetAmount;
@@ -61,6 +61,7 @@ contract CrowdFunding {
     event CampaignPublished(
         uint256 indexed campaignId, address indexed creator, uint256 indexed targetAmount, uint32 startAt, uint32 endAt
     );
+    event CamapignFunded(uint256 indexed campaignId, address indexed funder, uint256 indexed amount);
 
     //////////////////////////////////////////////////////////
     //////////////////////  Functions  ///////////////////////
@@ -81,7 +82,7 @@ contract CrowdFunding {
         }
 
         s_campaigns[s_campaignCount] = Campaign({
-            creator: msg.sender,
+            creator: payable(msg.sender),
             name: _name,
             description: _description,
             targetAmount: _targetAmount,
@@ -96,4 +97,32 @@ contract CrowdFunding {
 
         return s_campaignCount;
     }
+
+    function fundCampaign(uint256 campaignId, uint256 amount) external payable {
+        uint8 newFunder = 1;
+
+        address[] memory funders = s_campaigns[campaignId].funders;
+
+        for (uint256 i = 0; i < funders.length;) {
+            if (funders[i] == msg.sender) {
+                newFunder = 2;
+                break;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        if (newFunder == 1) {
+            s_campaigns[campaignId].funders.push(msg.sender);
+        }
+
+        s_addressToAmountFundedByCampaign[campaignId][msg.sender] =
+            s_addressToAmountFundedByCampaign[campaignId][msg.sender] + amount;
+
+        emit CamapignFunded(campaignId, msg.sender, amount);
+    }
+
+    // owner can withdraw
 }
