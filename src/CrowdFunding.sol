@@ -32,6 +32,9 @@ contract CrowdFunding {
     //////////////////////////////////////////////////////////
     error CrowdFunding__StartDate_ShouldBeInPresent();
     error CrowdFunding__InvalidTimeline();
+    error CrowdFunding__OnlyOwner_CanWithdraw();
+    error CrowdFunding__CampaignNotEnded();
+    error CrowdFunding__WithdrawFailed();
 
     //////////////////////////////////////////////////////////
     ////////////////  Type Declarations  /////////////////////
@@ -41,6 +44,7 @@ contract CrowdFunding {
         string name;
         string description;
         uint256 targetAmount;
+        uint256 amountCollected;
         uint32 startAt;
         uint32 endAt;
         string image;
@@ -62,6 +66,7 @@ contract CrowdFunding {
         uint256 indexed campaignId, address indexed creator, uint256 indexed targetAmount, uint32 startAt, uint32 endAt
     );
     event CamapignFunded(uint256 indexed campaignId, address indexed funder, uint256 indexed amount);
+    event WithdrawSuccessful(uint256 indexed campaignId, address indexed owner, uint256 indexed amount);
 
     //////////////////////////////////////////////////////////
     //////////////////////  Functions  ///////////////////////
@@ -86,6 +91,7 @@ contract CrowdFunding {
             name: _name,
             description: _description,
             targetAmount: _targetAmount,
+            amountCollected: 0,
             startAt: _startAt,
             endAt: _endAt,
             image: _image,
@@ -118,11 +124,30 @@ contract CrowdFunding {
             s_campaigns[campaignId].funders.push(msg.sender);
         }
 
+        s_campaigns[campaignId].amountCollected = s_campaigns[campaignId].amountCollected + amount;
+
         s_addressToAmountFundedByCampaign[campaignId][msg.sender] =
             s_addressToAmountFundedByCampaign[campaignId][msg.sender] + amount;
 
         emit CamapignFunded(campaignId, msg.sender, amount);
     }
 
-    // owner can withdraw
+    function withdraw(uint256 campaignId) external {
+        address creator = s_campaigns[campaignId].creator;
+        if (creator != msg.sender) {
+            revert CrowdFunding__OnlyOwner_CanWithdraw();
+        }
+        if (s_campaigns[campaignId].endAt > block.timestamp) {
+            revert CrowdFunding__CampaignNotEnded();
+        }
+
+        uint256 totalAmount = s_campaigns[campaignId].amountCollected;
+
+        emit WithdrawSuccessful(campaignId, msg.sender, totalAmount);
+
+        (bool success,) = creator.call{value: totalAmount}("");
+        if (!success) {
+            revert CrowdFunding__WithdrawFailed();
+        }
+    }
 }
