@@ -55,7 +55,7 @@ contract CrowdFunding {
     //////////////////////////////////////////////////////////
     ////////////////  Storage Variables  /////////////////////
     //////////////////////////////////////////////////////////
-    uint256 private s_campaignCount = 1;
+    uint256 private s_campaignsCount = 1;
     mapping(uint256 campaignId => Campaign) private s_campaigns;
     mapping(uint256 campaignId => mapping(address funders => uint256 amount)) s_addressToAmountFundedByCampaign;
 
@@ -86,7 +86,7 @@ contract CrowdFunding {
             revert CrowdFunding__InvalidTimeline();
         }
 
-        s_campaigns[s_campaignCount] = Campaign({
+        s_campaigns[s_campaignsCount] = Campaign({
             creator: payable(msg.sender),
             name: _name,
             description: _description,
@@ -99,9 +99,9 @@ contract CrowdFunding {
             claimedByOwner: false
         });
 
-        emit CampaignPublished(s_campaignCount, msg.sender, _targetAmount, _startAt, _endAt);
+        emit CampaignPublished(s_campaignsCount, msg.sender, _targetAmount, _startAt, _endAt);
 
-        return s_campaignCount;
+        return s_campaignsCount;
     }
 
     function fundCampaign(uint256 campaignId, uint256 amount) external payable {
@@ -149,5 +149,35 @@ contract CrowdFunding {
         if (!success) {
             revert CrowdFunding__WithdrawFailed();
         }
+    }
+
+    //////////////////////////////////////////////////////////
+    //////////////////  Getter Functions  ////////////////////
+    //////////////////////////////////////////////////////////
+    function getTotalCampaigns() external view returns (uint256) {
+        return s_campaignsCount;
+    }
+
+    function getCampaigns() external view returns (Campaign[] memory) {
+        Campaign[] memory allCampaigns = new Campaign[](s_campaignsCount);
+
+        for (uint256 i = 0; i < s_campaignsCount;) {
+            allCampaigns[i] = s_campaigns[i];
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        return allCampaigns;
+    }
+
+    function getCampaign(uint256 campaignId) external view returns (Campaign memory) {
+        return s_campaigns[campaignId];
+    }
+
+    function getFunders(uint256 campaignId) external view returns (address[] memory) {
+        address[] memory funders = s_campaigns[campaignId].funders;
+        return funders;
     }
 }
