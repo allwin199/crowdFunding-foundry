@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import {Script, console} from "forge-std/Script.sol";
 import {CampaignFactory} from "../src/CampaignFactory.sol";
 
-contract DeployCrowdFunding is Script {
+contract DeployCampaignFactory is Script {
     address deployerKey;
 
     constructor() {
