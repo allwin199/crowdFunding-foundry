@@ -155,7 +155,9 @@ contract CrowdFunding {
     //////////////////  Getter Functions  ////////////////////
     //////////////////////////////////////////////////////////
     function getTotalCampaigns() external view returns (uint256) {
-        return s_campaignsCount;
+        return s_campaignsCount - 1;
+        // since s_campaignsCount starting from 1
+        // to get the actual campaignCount we have to subtract by 1
     }
 
     function getCampaigns() external view returns (Campaign[] memory) {
