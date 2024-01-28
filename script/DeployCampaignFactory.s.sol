@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
-import {CrowdFunding} from "../src/CrowdFunding.sol";
+import {CampaignFactory} from "../src/CampaignFactory.sol";
 
 contract DeployCrowdFunding is Script {
     address deployerKey;
@@ -15,13 +15,13 @@ contract DeployCrowdFunding is Script {
         }
     }
 
-    function run() external returns (CrowdFunding) {
+    function run() external returns (CampaignFactory) {
         vm.startBroadcast(deployerKey);
 
-        CrowdFunding crowdFunding = new CrowdFunding();
+        CampaignFactory campaignFactory = new CampaignFactory();
 
         vm.stopBroadcast();
 
-        return crowdFunding;
+        return campaignFactory;
     }
 }
