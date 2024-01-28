@@ -70,7 +70,6 @@ contract Campaign {
     //////////////////////////////////////////////////////////
     //////////////////////  Functions  ///////////////////////
     //////////////////////////////////////////////////////////
-
     constructor(
         string memory name,
         string memory description,
@@ -87,41 +86,6 @@ contract Campaign {
         i_endAt = endAt;
         s_image = image;
     }
-
-    // function createCampaign(
-    //     string memory _name,
-    //     string memory _description,
-    //     uint256 _targetAmount,
-    //     uint256 _startAt,
-    //     uint256 _endAt,
-    //     string memory _image
-    // ) external returns (uint256) {
-    //     if (_startAt < block.timestamp) {
-    //         revert CrowdFunding__StartDate_ShouldBeInPresent();
-    //     }
-    //     if (_endAt < _startAt) {
-    //         revert CrowdFunding__InvalidTimeline();
-    //     }
-
-    //     s_campaigns[s_campaignsCount] = Campaign({
-    //         creator: payable(msg.sender),
-    //         name: _name,
-    //         description: _description,
-    //         targetAmount: _targetAmount,
-    //         amountCollected: 0,
-    //         startAt: _startAt,
-    //         endAt: _endAt,
-    //         image: _image,
-    //         funders: new address[](0),
-    //         claimedByOwner: false
-    //     });
-
-    //     emit CampaignCreated(s_campaignsCount, msg.sender, _targetAmount, _startAt, _endAt);
-
-    //     s_campaignsCount = s_campaignsCount + 1;
-
-    //     return s_campaignsCount - 1;
-    // }
 
     function fund(uint256 amount) external payable {
         if (amount == 0) {
