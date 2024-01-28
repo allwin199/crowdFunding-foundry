@@ -66,15 +66,15 @@ contract CampaignFactory {
         }
 
         Campaign campaign = new Campaign(_name, _description, _targetAmount, _startAt, _endAt, _image);
-        campaigns.push(address(campaign));
+        s_campaigns.push(address(campaign));
 
         emit CampaignCreated(address(campaign), msg.sender, _targetAmount, _startAt, _endAt);
 
         return address(campaign);
     }
 
-    function fund(address campaign, uint256 amount) external {
-        Campaign(payable(campaign)).fund(amount);
+    function fund(address campaign) external payable {
+        Campaign(payable(campaign)).fund(msg.value);
     }
 
     function withDraw(address campaign) external {

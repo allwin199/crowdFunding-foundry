@@ -40,7 +40,6 @@ contract Campaign {
     //////////////////////////////////////////////////////////
     ////////////////  Storage Variables  /////////////////////
     //////////////////////////////////////////////////////////
-
     address payable immutable i_creator;
     string private s_name;
     string private s_description;
@@ -55,17 +54,8 @@ contract Campaign {
     //////////////////////////////////////////////////////////
     //////////////////////   Events  /////////////////////////
     //////////////////////////////////////////////////////////
-
     event CampaignFunded(address indexed campaign, address indexed funder, uint256 indexed amount);
     event WithdrawSuccessful(address indexed campaign, address indexed owner, uint256 indexed amount);
-
-    receive() external payable {
-        revert();
-    }
-
-    fallback() external payable {
-        revert();
-    }
 
     //////////////////////////////////////////////////////////
     //////////////////////  Functions  ///////////////////////
@@ -87,7 +77,15 @@ contract Campaign {
         s_image = image;
     }
 
-    function fund(uint256 amount) external payable {
+    receive() external payable {
+        fund(msg.value);
+    }
+
+    fallback() external payable {
+        fund(msg.value);
+    }
+
+    function fund(uint256 amount) public payable {
         if (amount == 0) {
             revert Campaign__FundingWith_ZeroAmount();
         }
@@ -147,7 +145,6 @@ contract Campaign {
     //////////////////////////////////////////////////////////
     //////////////////  Getter Functions  ////////////////////
     //////////////////////////////////////////////////////////
-
     function getFunders() external view returns (address[] memory) {
         return s_funders;
     }
