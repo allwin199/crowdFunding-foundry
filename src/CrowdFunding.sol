@@ -35,6 +35,8 @@ contract CrowdFunding {
     error CrowdFunding__OnlyOwner_CanWithdraw();
     error CrowdFunding__CampaignNotEnded();
     error CrowdFunding__WithdrawFailed();
+    error CrowdFunding__FundingWith_ZeroAmount();
+    error CrowdFunding__InvalidCampaign();
 
     //////////////////////////////////////////////////////////
     ////////////////  Type Declarations  /////////////////////
@@ -111,6 +113,14 @@ contract CrowdFunding {
     }
 
     function fundCampaign(uint256 campaignId, uint256 amount) external payable {
+        if (amount == 0) {
+            revert CrowdFunding__FundingWith_ZeroAmount();
+        }
+
+        if (s_campaigns[campaignId].creator == address(0)) {
+            revert CrowdFunding__InvalidCampaign();
+        }
+
         uint8 newFunder = 1;
 
         address[] memory funders = s_campaigns[campaignId].funders;
@@ -187,5 +197,9 @@ contract CrowdFunding {
     function getFunders(uint256 campaignId) external view returns (address[] memory) {
         address[] memory funders = s_campaigns[campaignId].funders;
         return funders;
+    }
+
+    function getFunderInfo(uint256 campaignId, address funder) external view returns (uint256) {
+        return s_addressToAmountFundedByCampaign[campaignId][funder];
     }
 }
