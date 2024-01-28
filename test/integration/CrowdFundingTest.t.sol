@@ -2,8 +2,8 @@
 pragma solidity 0.8.20;
 
 import {Test} from "forge-std/Test.sol";
-import {DeployCrowdFunding} from "../script/DeployCrowdFunding.s.sol";
-import {CrowdFunding} from "../src/CrowdFunding.sol";
+import {DeployCrowdFunding} from "../../script/DeployCrowdFunding.s.sol";
+import {CrowdFunding} from "../../src/CrowdFunding.sol";
 
 contract CrowdFundingTest is Test {
     //////////////////////////////////////////////////////////
