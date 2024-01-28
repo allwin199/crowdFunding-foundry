@@ -4,6 +4,13 @@ pragma solidity 0.8.20;
 import {Campaign} from "./Campaign.sol";
 
 contract CampaignFactory {
+    event CampaignCreated(
+        address indexed campaign, address indexed creator, uint256 indexed targetAmount, uint256 startAt, uint256 endAt
+    );
+
+    error Campaign__StartDate_ShouldBeInPresent();
+    error Campaign__InvalidTimeline();
+
     address[] private campaigns;
 
     function createCampaign(
@@ -14,8 +21,17 @@ contract CampaignFactory {
         uint256 _endAt,
         string memory _image
     ) external returns (address) {
+        if (_startAt < block.timestamp) {
+            revert Campaign__StartDate_ShouldBeInPresent();
+        }
+        if (_endAt < _startAt) {
+            revert Campaign__InvalidTimeline();
+        }
+
         Campaign campaign = new Campaign(_name, _description, _targetAmount, _startAt, _endAt, _image);
         campaigns.push(address(campaign));
+
+        emit CampaignCreated(address(campaign), msg.sender, _targetAmount, _startAt, _endAt);
 
         return address(campaign);
     }

@@ -30,13 +30,10 @@ contract Campaign {
     //////////////////////////////////////////////////////////
     ////////////////////  Custom Errors  /////////////////////
     //////////////////////////////////////////////////////////
-    error Campaign__StartDate_ShouldBeInPresent();
-    error Campaign__InvalidTimeline();
     error Campaign__OnlyOwner_CanWithdraw();
     error Campaign__CampaignNotEnded();
     error Campaign__WithdrawFailed();
     error Campaign__FundingWith_ZeroAmount();
-    error Campaign__InvalidCampaign();
     error Campaign__CampaignAlreadyEnded();
     error Campaign__AmountAlreadyWithdrawn();
 
@@ -48,7 +45,6 @@ contract Campaign {
     string private s_name;
     string private s_description;
     uint256 private immutable i_targetAmount;
-    uint256 private s_amountCollected;
     uint256 private immutable i_startAt;
     uint256 private immutable i_endAt;
     string private s_image;
@@ -59,13 +55,7 @@ contract Campaign {
     //////////////////////////////////////////////////////////
     //////////////////////   Events  /////////////////////////
     //////////////////////////////////////////////////////////
-    // event CampaignCreated(
-    //     uint256 indexed campaignId,
-    //     address indexed creator,
-    //     uint256 indexed targetAmount,
-    //     uint256 startAt,
-    //     uint256 endAt
-    // );
+
     event CampaignFunded(address indexed campaign, address indexed funder, uint256 indexed amount);
     event WithdrawSuccessful(address indexed campaign, address indexed owner, uint256 indexed amount);
 
@@ -138,13 +128,9 @@ contract Campaign {
             revert Campaign__FundingWith_ZeroAmount();
         }
 
-        // if (s_campaigns[campaignId].creator == address(0)) {
-        //     revert CrowdFunding__InvalidCampaign();
-        // }
-
-        // if (s_campaigns[campaignId].claimedByOwner) {
-        //     revert CrowdFunding__CampaignAlreadyEnded();
-        // }
+        if (s_claimedByOwner) {
+            revert Campaign__CampaignAlreadyEnded();
+        }
 
         uint8 newFunder = 1;
 
@@ -164,6 +150,8 @@ contract Campaign {
         if (newFunder == 1) {
             s_funders.push(msg.sender);
         }
+
+        s_addressToAmountFunded[msg.sender] = amount;
 
         emit CampaignFunded(address(this), msg.sender, amount);
     }
@@ -195,36 +183,12 @@ contract Campaign {
     //////////////////////////////////////////////////////////
     //////////////////  Getter Functions  ////////////////////
     //////////////////////////////////////////////////////////
-    // function getTotalCampaigns() external view returns (uint256) {
-    //     return s_campaignsCount - 1;
-    //     // since s_campaignsCount starting from 1
-    //     // to get the actual campaignCount we have to subtract by 1
-    // }
 
-    // function getCampaigns() external view returns (Campaign[] memory) {
-    //     Campaign[] memory allCampaigns = new Campaign[](s_campaignsCount);
+    function getFunders() external view returns (address[] memory) {
+        return s_funders;
+    }
 
-    //     for (uint256 i = 0; i < s_campaignsCount;) {
-    //         allCampaigns[i] = s_campaigns[i];
-
-    //         unchecked {
-    //             ++i;
-    //         }
-    //     }
-
-    //     return allCampaigns;
-    // }
-
-    // function getCampaign(uint256 campaignId) external view returns (Campaign memory) {
-    //     return s_campaigns[campaignId];
-    // }
-
-    // function getFunders(uint256 campaignId) external view returns (address[] memory) {
-    //     address[] memory funders = s_campaigns[campaignId].funders;
-    //     return funders;
-    // }
-
-    // function getFunderInfo(uint256 campaignId, address funder) external view returns (uint256) {
-    //     return s_addressToAmountFundedByCampaign[campaignId][funder];
-    // }
+    function getFunderInfo(address funder) external view returns (uint256 amount) {
+        return s_addressToAmountFunded[funder];
+    }
 }
