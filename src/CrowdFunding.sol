@@ -45,8 +45,8 @@ contract CrowdFunding {
         string description;
         uint256 targetAmount;
         uint256 amountCollected;
-        uint32 startAt;
-        uint32 endAt;
+        uint256 startAt;
+        uint256 endAt;
         string image;
         address[] funders;
         bool claimedByOwner;
@@ -62,8 +62,12 @@ contract CrowdFunding {
     //////////////////////////////////////////////////////////
     //////////////////////   Events  /////////////////////////
     //////////////////////////////////////////////////////////
-    event CampaignPublished(
-        uint256 indexed campaignId, address indexed creator, uint256 indexed targetAmount, uint32 startAt, uint32 endAt
+    event CampaignCreated(
+        uint256 indexed campaignId,
+        address indexed creator,
+        uint256 indexed targetAmount,
+        uint256 startAt,
+        uint256 endAt
     );
     event CamapignFunded(uint256 indexed campaignId, address indexed funder, uint256 indexed amount);
     event WithdrawSuccessful(uint256 indexed campaignId, address indexed owner, uint256 indexed amount);
@@ -75,14 +79,14 @@ contract CrowdFunding {
         string memory _name,
         string memory _description,
         uint256 _targetAmount,
-        uint32 _startAt,
-        uint32 _endAt,
+        uint256 _startAt,
+        uint256 _endAt,
         string memory _image
     ) external returns (uint256) {
         if (_startAt < block.timestamp) {
             revert CrowdFunding__StartDate_ShouldBeInPresent();
         }
-        if (_startAt < _endAt) {
+        if (_endAt < _startAt) {
             revert CrowdFunding__InvalidTimeline();
         }
 
@@ -99,9 +103,11 @@ contract CrowdFunding {
             claimedByOwner: false
         });
 
-        emit CampaignPublished(s_campaignsCount, msg.sender, _targetAmount, _startAt, _endAt);
+        emit CampaignCreated(s_campaignsCount, msg.sender, _targetAmount, _startAt, _endAt);
 
-        return s_campaignsCount;
+        s_campaignsCount = s_campaignsCount + 1;
+
+        return s_campaignsCount - 1;
     }
 
     function fundCampaign(uint256 campaignId, uint256 amount) external payable {
