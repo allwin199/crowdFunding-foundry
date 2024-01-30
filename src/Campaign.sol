@@ -61,6 +61,7 @@ contract Campaign {
     //////////////////////  Functions  ///////////////////////
     //////////////////////////////////////////////////////////
     constructor(
+        address owner,
         string memory name,
         string memory description,
         uint256 targetAmount,
@@ -68,7 +69,7 @@ contract Campaign {
         uint256 endAt,
         string memory image
     ) {
-        i_creator = payable(msg.sender);
+        i_creator = payable(owner);
         s_name = name;
         s_description = description;
         i_targetAmount = targetAmount;
@@ -78,14 +79,14 @@ contract Campaign {
     }
 
     receive() external payable {
-        fund();
+        fund(msg.sender);
     }
 
     fallback() external payable {
-        fund();
+        fund(msg.sender);
     }
 
-    function fund() public payable {
+    function fund(address sender) public payable {
         if (msg.value == 0) {
             revert Campaign__FundingWith_ZeroAmount();
         }
@@ -99,7 +100,7 @@ contract Campaign {
         address[] memory funders = s_funders;
 
         for (uint256 i = 0; i < funders.length;) {
-            if (funders[i] == msg.sender) {
+            if (funders[i] == sender) {
                 newFunder = 2;
                 break;
             }
@@ -110,17 +111,17 @@ contract Campaign {
         }
 
         if (newFunder == 1) {
-            s_funders.push(msg.sender);
+            s_funders.push(sender);
         }
 
-        s_addressToAmountFunded[msg.sender] = msg.value;
+        s_addressToAmountFunded[sender] = msg.value;
 
-        emit CampaignFunded(address(this), msg.sender, msg.value);
+        emit CampaignFunded(address(this), sender, msg.value);
     }
 
-    function withdraw() external {
+    function withdraw(address sender) external {
         address owner = i_creator;
-        if (owner != msg.sender) {
+        if (owner != sender) {
             revert Campaign__OnlyOwner_CanWithdraw();
         }
 
@@ -134,9 +135,9 @@ contract Campaign {
 
         s_claimedByOwner = true;
 
-        emit WithdrawSuccessful(address(this), msg.sender, address(this).balance);
+        emit WithdrawSuccessful(address(this), sender, address(this).balance);
 
-        (bool sent,) = payable(owner).call{value: address(this).balance}("");
+        (bool sent,) = sender.call{value: address(this).balance}("");
         if (!sent) {
             revert Campaign__WithdrawFailed();
         }

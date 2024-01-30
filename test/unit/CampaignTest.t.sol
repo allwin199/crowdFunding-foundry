@@ -29,7 +29,7 @@ contract CampaignTest is Test {
 
     function setUp() external {
         vm.startPrank(user);
-        campaign = new Campaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        campaign = new Campaign(user, CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
         vm.stopPrank();
 
         // let's give funds to the user
@@ -45,20 +45,20 @@ contract CampaignTest is Test {
         vm.startPrank(funder);
 
         vm.expectRevert(Campaign.Campaign__FundingWith_ZeroAmount.selector);
-        campaign.fund();
+        campaign.fund(funder);
 
         vm.stopPrank();
     }
 
     function test_FunderCanFund() external {
         vm.startPrank(funder);
-        campaign.fund{value: FUNDING_AMOUNT}();
+        campaign.fund{value: FUNDING_AMOUNT}(funder);
         vm.stopPrank();
     }
 
     modifier CampaignFundedByFunder() {
         vm.startPrank(funder);
-        campaign.fund{value: FUNDING_AMOUNT}();
+        campaign.fund{value: FUNDING_AMOUNT}(funder);
         vm.stopPrank();
         _;
     }
@@ -83,7 +83,7 @@ contract CampaignTest is Test {
 
         vm.expectEmit(true, true, true, false, address(campaign));
         emit CampaignFunded(address(campaign), funder, FUNDING_AMOUNT);
-        campaign.fund{value: FUNDING_AMOUNT}();
+        campaign.fund{value: FUNDING_AMOUNT}(funder);
 
         vm.stopPrank();
     }
@@ -95,14 +95,14 @@ contract CampaignTest is Test {
     function test_RevertsIf_WithdrawNotCalled_ByOwner() public CampaignFundedByFunder {
         vm.startPrank(funder);
         vm.expectRevert(Campaign.Campaign__OnlyOwner_CanWithdraw.selector);
-        campaign.withdraw();
+        campaign.withdraw(funder);
         vm.stopPrank();
     }
 
     function test_RevertsIf_WithdrawCalled_BeforeEndDate() public CampaignFundedByFunder {
         vm.startPrank(user);
         vm.expectRevert(Campaign.Campaign__CampaignNotEnded.selector);
-        campaign.withdraw();
+        campaign.withdraw(user);
         vm.stopPrank();
     }
 
@@ -111,7 +111,7 @@ contract CampaignTest is Test {
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
-        campaign.withdraw();
+        campaign.withdraw(user);
         vm.stopPrank();
     }
 
@@ -123,7 +123,7 @@ contract CampaignTest is Test {
         uint256 campaignBalance = address(campaign).balance;
 
         vm.startPrank(user);
-        campaign.withdraw();
+        campaign.withdraw(user);
         vm.stopPrank();
 
         uint256 endingOwnerBalance = address(user).balance;
@@ -136,12 +136,12 @@ contract CampaignTest is Test {
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
-        campaign.withdraw();
+        campaign.withdraw(user);
         vm.stopPrank();
 
         vm.startPrank(user);
         vm.expectRevert(Campaign.Campaign__AmountAlreadyWithdrawn.selector);
-        campaign.withdraw();
+        campaign.withdraw(user);
         vm.stopPrank();
     }
 
@@ -153,7 +153,7 @@ contract CampaignTest is Test {
 
         vm.expectEmit(true, true, true, false, address(campaign));
         emit WithdrawSuccessful(address(campaign), user, address(campaign).balance);
-        campaign.withdraw();
+        campaign.withdraw(user);
 
         vm.stopPrank();
     }
@@ -161,7 +161,7 @@ contract CampaignTest is Test {
     modifier multipleFunding() {
         for (uint160 i = 2; i < 6; i++) {
             hoax(address(i), STARTING_BALANCE);
-            campaign.fund{value: FUNDING_AMOUNT}();
+            campaign.fund{value: FUNDING_AMOUNT}(address(i));
         }
         vm.warp(block.timestamp + 100000);
         vm.roll(block.number + 1);
@@ -177,7 +177,7 @@ contract CampaignTest is Test {
         uint256 campaignBalance = address(campaign).balance;
 
         vm.startPrank(user);
-        campaign.withdraw();
+        campaign.withdraw(user);
         vm.stopPrank();
 
         uint256 endingOwnerBalance = address(user).balance;
@@ -191,7 +191,7 @@ contract CampaignTest is Test {
         multipleFunding
     {
         vm.startPrank(user);
-        campaign.withdraw();
+        campaign.withdraw(user);
         vm.stopPrank();
 
         uint256 endingCampaignBalance = address(campaign).balance;
@@ -204,12 +204,12 @@ contract CampaignTest is Test {
         vm.roll(block.number + 1);
 
         vm.startPrank(user);
-        campaign.withdraw();
+        campaign.withdraw(user);
         vm.stopPrank();
 
         vm.startPrank(user);
         vm.expectRevert(Campaign.Campaign__CampaignAlreadyEnded.selector);
-        campaign.fund{value: FUNDING_AMOUNT}();
+        campaign.fund{value: FUNDING_AMOUNT}(funder);
         vm.stopPrank();
     }
 
@@ -237,12 +237,14 @@ contract CampaignTest is Test {
         vm.deal(address(mocksWithdrawFailed), STARTING_BALANCE);
 
         vm.startPrank(address(mocksWithdrawFailed));
-        Campaign mockCampaign = new Campaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        Campaign mockCampaign = new Campaign(
+            address(mocksWithdrawFailed), CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE
+        );
         vm.stopPrank();
 
         // fund the campaign
         vm.startPrank(funder);
-        mockCampaign.fund{value: FUNDING_AMOUNT}();
+        mockCampaign.fund{value: FUNDING_AMOUNT}(funder);
         vm.stopPrank();
 
         vm.warp(block.timestamp + 100000);
@@ -250,7 +252,7 @@ contract CampaignTest is Test {
 
         vm.startPrank(address(mocksWithdrawFailed));
         vm.expectRevert(Campaign.Campaign__WithdrawFailed.selector);
-        mockCampaign.withdraw();
+        mockCampaign.withdraw(address(mocksWithdrawFailed));
         vm.stopPrank();
     }
 }

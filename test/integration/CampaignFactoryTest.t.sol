@@ -48,12 +48,93 @@ contract CrowdFundingTest is Test {
         vm.deal(funder, STARTING_BALANCE);
     }
 
-    function test_CreateCampaign() external {
+    function test_RevertsIf_CampaignStartDate_NotInPresent() public {
+        vm.startPrank(user);
+        vm.expectRevert(CampaignFactory.CampaignFactory__StartDate_ShouldBeInPresent.selector);
+        campaignFactory.createCampaign(
+            CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, block.timestamp - 1, endAt, IMAGE
+        );
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_InvalidTimeline() public {
+        vm.warp(block.timestamp + 100);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(user);
+        vm.expectRevert(CampaignFactory.CampaignFactory__InvalidTimeline.selector);
+        campaignFactory.createCampaign(
+            CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, block.timestamp, block.timestamp - 50, IMAGE
+        );
+        vm.stopPrank();
+    }
+
+    function test_UserCan_CreateCampaign() external {
         vm.startPrank(user);
         address campaign =
             campaignFactory.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
         vm.stopPrank();
 
         assert(campaign != address(0));
+    }
+
+    function test_UserCan_CreateCampaign_UpdatesCampaignsArray() external {
+        vm.startPrank(user);
+        address campaign =
+            campaignFactory.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
+        address[] memory campaigns = campaignFactory.getAllCampaigns();
+
+        assertEq(campaign, campaigns[0]);
+    }
+
+    function test_UserCan_CreateCampaign_UpdatesMapping() external {
+        vm.startPrank(user);
+        address campaign =
+            campaignFactory.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
+        address[] memory campaignsCreatedByUser = campaignFactory.getCampaignsCreatedByOwner(user);
+
+        assertEq(campaign, campaignsCreatedByUser[0]);
+    }
+
+    function test_FunderCan_FundCampaign_UsingCampaignFactory() external {
+        vm.startPrank(user);
+        address campaign =
+            campaignFactory.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
+        vm.startPrank(funder);
+        campaignFactory.fund{value: FUNDING_AMOUNT}(campaign);
+        vm.stopPrank();
+
+        uint256 campaignBalance = address(campaign).balance;
+
+        assertEq(campaignBalance, FUNDING_AMOUNT);
+    }
+
+    function test_WithdrawCampaign_UsingFactory() external {
+        console.log("Owner", user);
+        vm.startPrank(user);
+        address campaign =
+            campaignFactory.createCampaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
+        vm.startPrank(funder);
+        campaignFactory.fund{value: FUNDING_AMOUNT}(campaign);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 100000);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(user);
+        campaignFactory.withdraw(campaign);
+        vm.stopPrank();
+
+        uint256 campaignBalance = address(campaign).balance;
+
+        assertEq(campaignBalance, 0);
     }
 }

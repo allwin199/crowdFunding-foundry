@@ -27,18 +27,19 @@ pragma solidity 0.8.20;
 //////////////////////  Imports  /////////////////////////
 //////////////////////////////////////////////////////////
 import {Campaign} from "./Campaign.sol";
+import {console} from "forge-std/console.sol";
 
 contract CampaignFactory {
     //////////////////////////////////////////////////////////
     ////////////////////  Custom Errors  /////////////////////
     //////////////////////////////////////////////////////////
-    error Campaign__StartDate_ShouldBeInPresent();
-    error Campaign__InvalidTimeline();
+    error CampaignFactory__StartDate_ShouldBeInPresent();
+    error CampaignFactory__InvalidTimeline();
 
     //////////////////////////////////////////////////////////
     ////////////////  Storage Variables  /////////////////////
     //////////////////////////////////////////////////////////
-    mapping(address owner => address campaign) private s_addressToCampaign;
+    mapping(address owner => address[] campaigns) private s_addressToCampaigns;
     address[] private s_campaigns;
 
     //////////////////////////////////////////////////////////
@@ -60,14 +61,17 @@ contract CampaignFactory {
         string memory _image
     ) external returns (address) {
         if (_startAt < block.timestamp) {
-            revert Campaign__StartDate_ShouldBeInPresent();
+            revert CampaignFactory__StartDate_ShouldBeInPresent();
         }
         if (_endAt < _startAt) {
-            revert Campaign__InvalidTimeline();
+            revert CampaignFactory__InvalidTimeline();
         }
 
-        Campaign campaign = new Campaign(_name, _description, _targetAmount, _startAt, _endAt, _image);
+        Campaign campaign = new Campaign(msg.sender, _name, _description, _targetAmount, _startAt, _endAt, _image);
+
         s_campaigns.push(address(campaign));
+
+        s_addressToCampaigns[msg.sender].push(address(campaign));
 
         emit CampaignCreated(address(campaign), msg.sender, _targetAmount, _startAt, _endAt);
 
@@ -75,11 +79,11 @@ contract CampaignFactory {
     }
 
     function fund(address campaign) external payable {
-        Campaign(payable(campaign)).fund();
+        Campaign(payable(campaign)).fund{value: msg.value}(msg.sender);
     }
 
-    function withDraw(address campaign) external {
-        Campaign(payable(campaign)).withdraw();
+    function withdraw(address campaign) external {
+        Campaign(payable(campaign)).withdraw(msg.sender);
     }
 
     //////////////////////////////////////////////////////////
@@ -87,5 +91,10 @@ contract CampaignFactory {
     //////////////////////////////////////////////////////////
     function getAllCampaigns() external view returns (address[] memory) {
         return s_campaigns;
+    }
+
+    function getCampaignsCreatedByOwner(address owner) external view returns (address[] memory) {
+        console.log(s_addressToCampaigns[owner].length);
+        return s_addressToCampaigns[owner];
     }
 }
