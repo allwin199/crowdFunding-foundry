@@ -197,4 +197,34 @@ contract CampaignTest is Test {
 
         assertEq(endingCampaignBalance, 0);
     }
+
+    function test_RevertsIf_CampaignAlreadyEnded() public CampaignFundedByFunder {
+        vm.warp(block.timestamp + 100000);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(user);
+        campaign.withdraw();
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        vm.expectRevert(Campaign.Campaign__CampaignAlreadyEnded.selector);
+        campaign.fund{value: FUNDING_AMOUNT}();
+        vm.stopPrank();
+    }
+
+    function test_FunderCanFund_UsingFallback() public {
+        vm.startPrank(user);
+
+        (bool success,) = address(campaign).call{value: FUNDING_AMOUNT}("");
+        // funding using fallback method
+        // since we haven't mentioned any specific function name to call
+        // fallback will be called because callData is empty
+
+        vm.stopPrank();
+
+        assertTrue(success);
+
+        uint256 campaignBalance = address(campaign).balance;
+        assertEq(campaignBalance, FUNDING_AMOUNT);
+    }
 }
