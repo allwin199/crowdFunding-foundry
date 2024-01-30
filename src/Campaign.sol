@@ -78,15 +78,15 @@ contract Campaign {
     }
 
     receive() external payable {
-        fund(msg.value);
+        fund();
     }
 
     fallback() external payable {
-        fund(msg.value);
+        fund();
     }
 
-    function fund(uint256 amount) public payable {
-        if (amount == 0) {
+    function fund() public payable {
+        if (msg.value == 0) {
             revert Campaign__FundingWith_ZeroAmount();
         }
 
@@ -113,9 +113,9 @@ contract Campaign {
             s_funders.push(msg.sender);
         }
 
-        s_addressToAmountFunded[msg.sender] = amount;
+        s_addressToAmountFunded[msg.sender] = msg.value;
 
-        emit CampaignFunded(address(this), msg.sender, amount);
+        emit CampaignFunded(address(this), msg.sender, msg.value);
     }
 
     function withdraw() external {

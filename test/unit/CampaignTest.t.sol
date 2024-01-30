@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {Campaign} from "../../src/Campaign.sol";
 
 contract CampaignTest is Test {
@@ -44,34 +44,36 @@ contract CampaignTest is Test {
         vm.startPrank(funder);
 
         vm.expectRevert(Campaign.Campaign__FundingWith_ZeroAmount.selector);
-        campaign.fund(0);
+        campaign.fund();
 
         vm.stopPrank();
     }
 
     function test_FunderCanFund() external {
         vm.startPrank(funder);
-        campaign.fund(FUNDING_AMOUNT);
+        campaign.fund{value: FUNDING_AMOUNT}();
         vm.stopPrank();
     }
 
-    function test_FunderCanFund_UpdatesBalance() external {
+    modifier CampaignFundedByFunder() {
         vm.startPrank(funder);
-        campaign.fund(FUNDING_AMOUNT);
+        campaign.fund{value: FUNDING_AMOUNT}();
         vm.stopPrank();
-
-        uint256 fundedByFunder = campaign.getFunderInfo(funder);
-
-        assertEq(fundedByFunder, FUNDING_AMOUNT);
+        _;
     }
 
-    function test_FunderCanFund_UpdatesFunders() external {
-        vm.startPrank(funder);
-        campaign.fund(FUNDING_AMOUNT);
-        vm.stopPrank();
+    function test_FunderCanFund_UpdatesCampaignBalance() external CampaignFundedByFunder {
+        uint256 campaignBalance = address(campaign).balance;
+        assertEq(campaignBalance, FUNDING_AMOUNT);
+    }
 
+    function test_FunderCanFund_UpdatesFunderBalance() external CampaignFundedByFunder {
+        uint256 funderBalance = campaign.getFunderInfo(funder);
+        assertEq(funderBalance, FUNDING_AMOUNT);
+    }
+
+    function test_FunderCanFund_UpdatesFunders() external CampaignFundedByFunder {
         address[] memory funders = campaign.getFunders();
-
         assertEq(funders[0], funder);
     }
 
@@ -80,7 +82,7 @@ contract CampaignTest is Test {
 
         vm.expectEmit(true, true, true, false, address(campaign));
         emit CampaignFunded(address(campaign), funder, FUNDING_AMOUNT);
-        campaign.fund(FUNDING_AMOUNT);
+        campaign.fund{value: FUNDING_AMOUNT}();
 
         vm.stopPrank();
     }
@@ -88,13 +90,6 @@ contract CampaignTest is Test {
     //////////////////////////////////////////////////////////
     ////////////////////  Withdraw Tests  ////////////////////
     //////////////////////////////////////////////////////////
-
-    modifier CampaignFundedByFunder() {
-        vm.startPrank(funder);
-        campaign.fund(FUNDING_AMOUNT);
-        vm.stopPrank();
-        _;
-    }
 
     function test_RevertsIf_WithdrawNotCalled_ByOwner() public CampaignFundedByFunder {
         vm.startPrank(funder);
@@ -119,6 +114,22 @@ contract CampaignTest is Test {
         vm.stopPrank();
     }
 
+    function test_OwnerCan_Withdraw_UpdatesOwnerBalance() public CampaignFundedByFunder {
+        vm.warp(block.timestamp + 100000);
+        vm.roll(block.number + 1);
+
+        uint256 startingOwnerBalance = address(user).balance;
+        uint256 campaignBalance = address(campaign).balance;
+
+        vm.startPrank(user);
+        campaign.withdraw();
+        vm.stopPrank();
+
+        uint256 endingOwnerBalance = address(user).balance;
+
+        assertEq(endingOwnerBalance, startingOwnerBalance + campaignBalance);
+    }
+
     function test_RevertsIf_OwnerAlready_Withdrawn() public CampaignFundedByFunder {
         vm.warp(block.timestamp + 100000);
         vm.roll(block.number + 1);
@@ -133,7 +144,7 @@ contract CampaignTest is Test {
         vm.stopPrank();
     }
 
-    function test_OwnerCanWithdraw_EmitsEvent() external {
+    function test_OwnerCanWithdraw_EmitsEvent() external CampaignFundedByFunder {
         vm.warp(block.timestamp + 100000);
         vm.roll(block.number + 1);
 
@@ -144,5 +155,46 @@ contract CampaignTest is Test {
         campaign.withdraw();
 
         vm.stopPrank();
+    }
+
+    modifier multipleFunding() {
+        for (uint160 i = 2; i < 6; i++) {
+            hoax(address(i), STARTING_BALANCE);
+            campaign.fund{value: FUNDING_AMOUNT}();
+        }
+        vm.warp(block.timestamp + 100000);
+        vm.roll(block.number + 1);
+        _;
+    }
+
+    function test_OwnerCanWithdraw_AfterMultipleFunding_UpdatesOwnerBalance()
+        external
+        CampaignFundedByFunder
+        multipleFunding
+    {
+        uint256 startingOwnerBalance = address(user).balance;
+        uint256 campaignBalance = address(campaign).balance;
+
+        vm.startPrank(user);
+        campaign.withdraw();
+        vm.stopPrank();
+
+        uint256 endingOwnerBalance = address(user).balance;
+
+        assertEq(endingOwnerBalance, startingOwnerBalance + campaignBalance);
+    }
+
+    function test_OwnerCanWithdraw_AfterMultipleFunding_UpdatesCampaignBalance()
+        external
+        CampaignFundedByFunder
+        multipleFunding
+    {
+        vm.startPrank(user);
+        campaign.withdraw();
+        vm.stopPrank();
+
+        uint256 endingCampaignBalance = address(campaign).balance;
+
+        assertEq(endingCampaignBalance, 0);
     }
 }

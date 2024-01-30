@@ -38,6 +38,7 @@ contract CampaignFactory {
     //////////////////////////////////////////////////////////
     ////////////////  Storage Variables  /////////////////////
     //////////////////////////////////////////////////////////
+    mapping(address owner => address campaign) private s_addressToCampaign;
     address[] private s_campaigns;
 
     //////////////////////////////////////////////////////////
@@ -74,7 +75,7 @@ contract CampaignFactory {
     }
 
     function fund(address campaign) external payable {
-        Campaign(payable(campaign)).fund(msg.value);
+        Campaign(payable(campaign)).fund();
     }
 
     function withDraw(address campaign) external {
