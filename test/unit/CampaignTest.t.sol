@@ -3,6 +3,7 @@ pragma solidity 0.8.20;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Campaign} from "../../src/Campaign.sol";
+import {MocksWithdrawFailed} from "../mocks/MocksWithdrawFailed.sol";
 
 contract CampaignTest is Test {
     Campaign campaign;
@@ -226,5 +227,30 @@ contract CampaignTest is Test {
 
         uint256 campaignBalance = address(campaign).balance;
         assertEq(campaignBalance, FUNDING_AMOUNT);
+    }
+
+    // this fn needs its own setup
+    function test_RevertsIf_WithdrawFailed() public {
+        MocksWithdrawFailed mocksWithdrawFailed = new MocksWithdrawFailed();
+
+        //give balance to the mocks contract
+        vm.deal(address(mocksWithdrawFailed), STARTING_BALANCE);
+
+        vm.startPrank(address(mocksWithdrawFailed));
+        Campaign mockCampaign = new Campaign(CAMPAIGN_NAME, CAMPAIGN_DESCRIPTION, TARGET_AMOUNT, startAt, endAt, IMAGE);
+        vm.stopPrank();
+
+        // fund the campaign
+        vm.startPrank(funder);
+        mockCampaign.fund{value: FUNDING_AMOUNT}();
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 100000);
+        vm.roll(block.number + 1);
+
+        vm.startPrank(address(mocksWithdrawFailed));
+        vm.expectRevert(Campaign.Campaign__WithdrawFailed.selector);
+        mockCampaign.withdraw();
+        vm.stopPrank();
     }
 }
